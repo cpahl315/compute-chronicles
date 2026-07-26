@@ -41,6 +41,21 @@ const queries = [
   'data center electricity grid project construction capacity',
   'high bandwidth memory networking optical AI infrastructure'
 ];
+// Google News is useful for breadth, but it sometimes returns its own redirect
+// pages to automated readers. These direct publisher feeds keep discovery
+// resilient and ensure the article URL is the publisher's readable page.
+const directFeeds = [
+  'https://techcrunch.com/feed/',
+  'https://www.theverge.com/rss/index.xml',
+  'https://feeds.arstechnica.com/arstechnica/index',
+  'https://spectrum.ieee.org/feeds/feed.rss',
+  'https://www.theregister.com/headlines.atom',
+  'https://siliconangle.com/feed/',
+  'https://www.datacenterdynamics.com/en/rss/',
+  'https://nvidianews.nvidia.com/rss.xml',
+  'https://blog.google/rss/',
+  'https://openai.com/news/rss.xml'
+];
 
 if (!force && (weekday !== 'Sun' || hour !== 8)) {
   console.log(`Not publishing: current ${zone} time is ${weekday} ${hour}:00; weekly editions publish Sundays at 8:00 AM.`);
@@ -60,6 +75,13 @@ function decode(value = '') {
 }
 function cleanText(value = '') { return decode(value.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim(); }
 function tag(item, name) { return cleanText(item.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)<\\/${name}>`, 'i'))?.[1] || ''); }
+function itemLink(item) {
+  const textLink = tag(item, 'link');
+  if (textLink) return textLink;
+  const atomLink = (item.match(/<link\\b[^>]*\\bhref=["'][^"']+["'][^>]*>/i) || [])[0];
+  return attr(atomLink || '', 'href');
+}
+function itemPublished(item) { return Date.parse(tag(item, 'pubDate') || tag(item, 'published') || tag(item, 'updated')); }
 function cleanTitle(title) { return title.replace(/\s+-\s+[^-]{2,80}$/, '').replace(/\s+/g, ' ').trim(); }
 function hostname(url) { try { return new URL(url).hostname.toLowerCase().replace(/^www\./, ''); } catch { return ''; } }
 function allowedSource(url) {
@@ -105,8 +127,8 @@ async function fetchText(url) {
 
 async function readCandidate(item) {
   const title = cleanTitle(tag(item, 'title'));
-  const link = tag(item, 'link');
-  const feedPublishedAt = Date.parse(tag(item, 'pubDate'));
+  const link = itemLink(item);
+  const feedPublishedAt = itemPublished(item);
   if (!title || !link || !isFresh(feedPublishedAt) || title.length < 24) return null;
   try {
     const response = await fetchText(link);
@@ -123,10 +145,16 @@ async function readCandidate(item) {
 }
 
 async function collectCandidates() {
-  const feeds = await Promise.all(queries.map(async query => {
+  const googleFeeds = await Promise.all(queries.map(async query => {
     try { const response = await fetch(`https://news.google.com/rss/search?q=${encodeURIComponent(`${query} when:7d`)}&hl=en-US&gl=US&ceid=US:en`, { signal: AbortSignal.timeout(12000) }); return response.ok ? response.text() : ''; } catch { return ''; }
   }));
-  const items = feeds.flatMap(feed => feed.match(/<item>[\s\S]*?<\/item>/gi) || []);
+  const publisherFeeds = await Promise.all(directFeeds.map(async feedUrl => {
+    try { const response = await fetch(feedUrl, { signal: AbortSignal.timeout(12000), headers: { 'User-Agent': 'The-Compute-Chronicles/1.0 (+https://cpahl315.github.io/compute-chronicles/)' } }); return response.ok ? response.text() : ''; } catch { return ''; }
+  }));
+  const items = [...publisherFeeds, ...googleFeeds].flatMap(feed => [
+    ...(feed.match(/<item>[\s\S]*?<\/item>/gi) || []),
+    ...(feed.match(/<entry>[\s\S]*?<\/entry>/gi) || [])
+  ]);
   const unique = [];
   const seen = new Set();
   for (const item of items) {
