@@ -6,18 +6,28 @@ const root = process.cwd();
 const zone = 'America/Chicago';
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date());
 const hour = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: zone }).format(new Date()));
+const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: zone }).format(new Date());
 const force = process.env.FORCE_PUBLISH === 'true';
-const maxAgeMs = 24 * 60 * 60 * 1000;
+const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
 const archiveDir = path.join(root, 'Archive', today);
 const allowedHosts = new Map([
   ['reuters.com', 'Reuters'], ['apnews.com', 'Associated Press'], ['cnbc.com', 'CNBC'],
-  ['theverge.com', 'The Verge'], ['techcrunch.com', 'TechCrunch'], ['theregister.com', 'The Register'],
-  ['datacenterdynamics.com', 'Data Center Dynamics'], ['semianalysis.com', 'SemiAnalysis'],
+  ['bloomberg.com', 'Bloomberg'], ['ft.com', 'Financial Times'], ['wsj.com', 'The Wall Street Journal'],
+  ['bbc.com', 'BBC'], ['bbc.co.uk', 'BBC'], ['axios.com', 'Axios'], ['semafor.com', 'Semafor'],
+  ['theverge.com', 'The Verge'], ['techcrunch.com', 'TechCrunch'], ['arstechnica.com', 'Ars Technica'], ['wired.com', 'WIRED'],
+  ['ieee.org', 'IEEE Spectrum'], ['venturebeat.com', 'VentureBeat'], ['tomshardware.com', "Tom's Hardware"],
+  ['theregister.com', 'The Register'], ['siliconangle.com', 'SiliconANGLE'], ['blocksandfiles.com', 'Blocks & Files'],
+  ['datacenterdynamics.com', 'Data Center Dynamics'], ['datacenterknowledge.com', 'Data Center Knowledge'], ['capacitymedia.com', 'Capacity Media'],
+  ['lightreading.com', 'Light Reading'], ['fierce-network.com', 'Fierce Network'], ['semianalysis.com', 'SemiAnalysis'],
   ['nvidia.com', 'NVIDIA'], ['amd.com', 'AMD'], ['intel.com', 'Intel'], ['broadcom.com', 'Broadcom'],
-  ['microsoft.com', 'Microsoft'], ['aws.amazon.com', 'AWS'], ['aboutamazon.com', 'Amazon'],
-  ['blog.google', 'Google'], ['ai.google', 'Google'], ['about.fb.com', 'Meta'], ['openai.com', 'OpenAI'],
+  ['micron.com', 'Micron'], ['arm.com', 'Arm'], ['qualcomm.com', 'Qualcomm'], ['marvell.com', 'Marvell'],
+  ['dell.com', 'Dell'], ['hpe.com', 'HPE'], ['cisco.com', 'Cisco'], ['juniper.net', 'Juniper Networks'], ['supermicro.com', 'Supermicro'],
+  ['microsoft.com', 'Microsoft'], ['aws.amazon.com', 'AWS'], ['aboutamazon.com', 'Amazon'], ['cloud.google.com', 'Google Cloud'],
+  ['blog.google', 'Google'], ['ai.google', 'Google'], ['about.fb.com', 'Meta'], ['ai.meta.com', 'Meta'], ['openai.com', 'OpenAI'],
   ['anthropic.com', 'Anthropic'], ['oracle.com', 'Oracle'], ['tsmc.com', 'TSMC'], ['samsung.com', 'Samsung'],
-  ['skhynix.com', 'SK hynix'], ['equinix.com', 'Equinix'], ['digitalrealty.com', 'Digital Realty'],
+  ['skhynix.com', 'SK hynix'], ['coreweave.com', 'CoreWeave'], ['x.ai', 'xAI'], ['ibm.com', 'IBM'],
+  ['equinix.com', 'Equinix'], ['digitalrealty.com', 'Digital Realty'], ['vertiv.com', 'Vertiv'], ['schneider-electric.com', 'Schneider Electric'],
+  ['eaton.com', 'Eaton'], ['bloomenergy.com', 'Bloom Energy'], ['constellationenergy.com', 'Constellation Energy'],
   ['sec.gov', 'U.S. SEC'], ['energy.gov', 'U.S. Department of Energy'], ['ferc.gov', 'FERC'],
   ['ec.europa.eu', 'European Commission'], ['gov.uk', 'UK Government']
 ]);
@@ -26,11 +36,14 @@ const queries = [
   'Nvidia AMD AI chip semiconductor data center',
   'hyperscaler data center capacity power cooling networking',
   'AI infrastructure investment partnership financing',
-  'AI policy export controls data center energy'
+  'AI policy export controls data center energy',
+  'OpenAI Anthropic Google Meta Microsoft enterprise AI news',
+  'data center electricity grid project construction capacity',
+  'high bandwidth memory networking optical AI infrastructure'
 ];
 
-if (!force && hour !== 8) {
-  console.log(`Not publishing: current ${zone} hour is ${hour}, not 8.`);
+if (!force && (weekday !== 'Sun' || hour !== 8)) {
+  console.log(`Not publishing: current ${zone} time is ${weekday} ${hour}:00; weekly editions publish Sundays at 8:00 AM.`);
   process.exit(0);
 }
 try {
@@ -85,7 +98,7 @@ function similarity(left, right) { const a = words(left); const b = words(right)
 function isFresh(time) { return Number.isFinite(time) && time <= Date.now() + 5 * 60 * 1000 && Date.now() - time <= maxAgeMs; }
 
 async function fetchText(url) {
-  const response = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(15000), headers: { 'User-Agent': 'The-Compute-Chronicles/1.0 editorial bot (+https://cpahl315.github.io/compute-chronicles/)', Accept: 'text/html,application/xhtml+xml' } });
+  const response = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(20000), headers: { 'User-Agent': 'Mozilla/5.0 (compatible; The-Compute-Chronicles/1.0; +https://cpahl315.github.io/compute-chronicles/)', Accept: 'text/html,application/xhtml+xml' } });
   if (!response.ok || !/text\/html|application\/xhtml/i.test(response.headers.get('content-type') || '')) throw new Error(`Unreadable source (${response.status})`);
   return { html: await response.text(), url: response.url };
 }
@@ -101,7 +114,7 @@ async function readCandidate(item) {
     const source = allowedSource(canonical);
     const body = extractedText(response.html);
     const publishedAt = publishedFrom(response.html, feedPublishedAt);
-    if (!source || !isFresh(publishedAt) || body.length < 1100 || relevanceScore(`${title} ${body.slice(0, 12000)}`) < 3) return null;
+    if (!source || !isFresh(publishedAt) || body.length < 650 || relevanceScore(`${title} ${body.slice(0, 12000)}`) < 2) return null;
     return { title, link: canonical, source, publishedAt, body, description: meta(response.html, ['description', 'og:description']), relevance: relevanceScore(`${title} ${body.slice(0, 12000)}`) };
   } catch (error) {
     console.warn(`Skipped unreadable source: ${title} (${error.message})`);
@@ -111,7 +124,7 @@ async function readCandidate(item) {
 
 async function collectCandidates() {
   const feeds = await Promise.all(queries.map(async query => {
-    try { const response = await fetch(`https://news.google.com/rss/search?q=${encodeURIComponent(`${query} when:1d`)}&hl=en-US&gl=US&ceid=US:en`, { signal: AbortSignal.timeout(12000) }); return response.ok ? response.text() : ''; } catch { return ''; }
+    try { const response = await fetch(`https://news.google.com/rss/search?q=${encodeURIComponent(`${query} when:7d`)}&hl=en-US&gl=US&ceid=US:en`, { signal: AbortSignal.timeout(12000) }); return response.ok ? response.text() : ''; } catch { return ''; }
   }));
   const items = feeds.flatMap(feed => feed.match(/<item>[\s\S]*?<\/item>/gi) || []);
   const unique = [];
@@ -121,7 +134,7 @@ async function collectCandidates() {
     if (key && !seen.has(key)) { seen.add(key); unique.push(item); }
   }
   const readable = [];
-  for (const item of unique.slice(0, 48)) {
+  for (const item of unique.slice(0, 120)) {
     const candidate = await readCandidate(item);
     if (candidate && !readable.some(existing => similarity(existing.title, candidate.title) > 0.58 || existing.link === candidate.link)) readable.push(candidate);
   }
@@ -187,7 +200,7 @@ function storyMarkup(story, index) {
 function editionBody(edition) {
   const visuals = `<section class="visual-strip"><figure><img src="./assets/data-center-hero.png" alt="Modern AI data center with liquid cooling"><figcaption>Inside the physical backbone of the AI buildout.</figcaption></figure><figure><img src="./assets/ai-chip-detail.png" alt="AI accelerator chip and fiber optics"><figcaption>Compute, interconnect, and capacity.</figcaption></figure></section>`;
   const lightWindow = edition.stories.length < 5 ? `<p class="light-window">Only ${edition.stories.length} stories cleared today’s full-text, freshness, and editorial checks. Rather than fill the edition with stale coverage, we published the qualifying items.</p>` : '';
-  return `<section class="hero"><div class="eyebrow">${dateLabel(edition.date)} · Top five daily briefing</div><h1>${escapeHtml(edition.headline)}</h1><p class="dek">Five fresh developments in AI and data centers, with article-specific context and original reporting.</p></section>${visuals}<section class="market-pulse"><strong>EDITORIAL STANDARD</strong><span>${escapeHtml(edition.pulse)}</span></section><section><h2 class="section-title">Top stories</h2>${lightWindow}${edition.stories.map(storyMarkup).join('')}</section><section class="outlook"><div class="eyebrow">Industry outlook</div><h2>What the market is telling us.</h2><p>${escapeHtml(edition.outlook)}</p></section>`;
+  return `<section class="hero"><div class="eyebrow">${dateLabel(edition.date)} · Weekly briefing</div><h1>${escapeHtml(edition.headline)}</h1><p class="dek">Five consequential AI and data-center developments from the past week, with article-specific context and original reporting.</p></section>${visuals}<section class="market-pulse"><strong>EDITORIAL STANDARD</strong><span>${escapeHtml(edition.pulse)}</span></section><section><h2 class="section-title">Top stories</h2>${lightWindow}${edition.stories.map(storyMarkup).join('')}</section><section class="outlook"><div class="eyebrow">Industry outlook</div><h2>What the market is telling us.</h2><p>${escapeHtml(edition.outlook)}</p></section>`;
 }
 function archiveBody(editions) { return `<section class="archive-hero"><div class="eyebrow">Every daily edition</div><h1>The archive.</h1><p class="dek">A durable record of the AI and infrastructure signals that moved the market.</p></section><ol class="archive-list">${editions.map(edition => `<li><a href="./Archive/${edition.date}/index.html"><span class="meta">${dateLabel(edition.date)}</span><div><h2>${escapeHtml(edition.headline)}</h2><p>${escapeHtml(edition.dek)}</p></div><span class="arrow">↗</span></a></li>`).join('')}</ol>`; }
 
