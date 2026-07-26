@@ -68,7 +68,7 @@ try {
     process.exit(0);
   }
 } catch {}
-if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is required; preserving the existing live edition.');
+if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY is required; preserving the existing live edition.');
 
 function decode(value = '') {
   return String(value).replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'").replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code))).replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)));
@@ -169,26 +169,32 @@ async function collectCandidates() {
   return readable.sort((a, b) => b.relevance - a.relevance || b.publishedAt - a.publishedAt).slice(0, 12);
 }
 
-async function openAiJson(instructions, payload) {
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gpt-5-mini', input: `${instructions}\n\n${payload}`, text: { format: { type: 'json_object' } } })
+async function groqJson(instructions, payload) {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'system', content: instructions }, { role: 'user', content: payload }],
+      response_format: { type: 'json_object' },
+      temperature: 0.2
+    })
   });
-  if (!response.ok) throw new Error(`OpenAI editorial request failed (${response.status})`);
+  if (!response.ok) throw new Error(`Groq editorial request failed (${response.status})`);
   const result = await response.json();
-  const output = result.output_text || result.output?.flatMap(item => item.content || []).map(item => item.text || '').join('');
-  if (!output) throw new Error('OpenAI returned no editorial output');
+  const output = result.choices?.[0]?.message?.content;
+  if (!output) throw new Error('Groq returned no editorial output');
   return JSON.parse(output);
 }
 async function summarize(candidate) {
-  const result = await openAiJson(
+  const result = await groqJson(
     'You are the exacting editor of The Compute Chronicles. Write one original 115-165 word newsletter summary of the supplied full article for an informed AI and data-center reader. State concrete facts from this article, identify the specific business or infrastructure implication, and use clean American English. Do not use headings, labels, quotations, advice, generic market boilerplate, or facts not in the article. Do not repeat the headline. Return JSON only: {"summary":"..."}.',
     `TITLE: ${candidate.title}\nPUBLISHER: ${candidate.source}\nPUBLISHED: ${new Date(candidate.publishedAt).toISOString()}\nARTICLE TEXT:\n${candidate.body.slice(0, 15000)}`
   );
   return { ...candidate, summary: String(result.summary || '').trim() };
 }
 async function review(story) {
-  const result = await openAiJson(
+  const result = await groqJson(
     'You are a copy editor and fact checker. Compare the candidate summary with the source article. Approve only if every material claim is supported, the summary is 115-165 words, is specific to this article, contains no generic filler or headline restatement, and has correct spelling and grammar. If fixable, return a corrected summary. Return JSON only: {"approved":true|false,"summary":"...","reason":"brief reason"}.',
     `TITLE: ${story.title}\nSUMMARY: ${story.summary}\nSOURCE ARTICLE:\n${story.body.slice(0, 15000)}`
   );
@@ -214,7 +220,7 @@ async function buildStories(candidates) {
   return approved;
 }
 async function industryOutlook(stories) {
-  const result = await openAiJson(
+  const result = await groqJson(
     'Write one 110-150 word industry-outlook passage based only on the supplied daily story summaries. Identify concrete trends and constraints relevant to AI and data centers: supply chain, power, network capacity, financing, policy, or geopolitics where present. Be specific to this edition; do not repeat a story summary, invent facts, or use generic filler. Return JSON only: {"outlook":"..."}.',
     stories.map(story => `${story.title}\n${story.summary}`).join('\n\n')
   );
