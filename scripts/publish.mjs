@@ -32,6 +32,9 @@ const queries = [
 function decode(text = '') { return text.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>'); }
 function tag(item, name) { return decode(item.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)<\\/${name}>`, 'i'))?.[1] || '').trim(); }
 function cleanTitle(title) { return title.replace(/\s+-\s+[^-]{2,80}$/, '').trim(); }
+function cleanDescription(description) {
+  return decode(description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')).trim().slice(0, 650);
+}
 
 async function collectStories() {
   const requests = queries.map(query => fetch(`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`).then(response => response.ok ? response.text() : '').catch(() => ''));
@@ -43,10 +46,12 @@ async function collectStories() {
       const title = cleanTitle(tag(item, 'title'));
       const link = tag(item, 'link');
       const source = tag(item, 'source') || 'Source';
+      const brief = cleanDescription(tag(item, 'description'));
       const key = title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 85);
       if (!title || !link || seen.has(key) || title.length < 24) continue;
       seen.add(key);
-      stories.push({ title, link, source, summary: `Why it matters: ${title} is part of the fast-moving AI and digital-infrastructure cycle. Open the original reporting for the full context and primary details.` });
+      const happened = brief || `The report focuses on ${title}.`;
+      stories.push({ title, link, source, brief, summary: `What happened: ${happened}\n\nWhy it matters: This development is relevant to the AI and data-center buildout because it can affect the pace, cost, policy environment, or competitive position of the companies and infrastructure involved.\n\nWhat to watch: Follow the original reporting for confirmed details, implementation timing, and any response from the companies or agencies involved.` });
     }
   }
   return stories.slice(0, 10);
@@ -54,7 +59,7 @@ async function collectStories() {
 
 async function enrich(stories) {
   if (!process.env.OPENAI_API_KEY || !stories.length) return stories;
-  const prompt = `You are the editor of The Compute Chronicles, a concise daily AI and data-center briefing. Rewrite each supplied news headline into a factual 30-45 word "Why it matters" summary. Do not invent facts. Return JSON only: {"stories":[{"summary":"..."}]}, retaining order. Headlines:\n${stories.map((story, index) => `${index + 1}. ${story.title}`).join('\n')}`;
+  const prompt = `You are the editor of The Compute Chronicles. For every supplied news item, write a factual 90-130 word briefing for an informed reader. Use exactly three compact paragraphs labelled "What happened:", "Why it matters:", and "What to watch:". Use only the supplied headline and source blurb; do not invent facts, numbers, dates, or quotations. Return JSON only: {"stories":[{"summary":"..."}]}, retaining order. Items:\n${stories.map((story, index) => `${index + 1}. HEADLINE: ${story.title}\nSOURCE: ${story.source}\nBLURB: ${story.brief || 'No source blurb supplied.'}`).join('\n\n')}`;
   try {
     const response = await fetch('https://api.openai.com/v1/responses', { method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'gpt-5-mini', input: prompt, text: { format: { type: 'json_object' } } }) });
     const result = await response.json();
