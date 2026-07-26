@@ -111,10 +111,10 @@ async function readCandidate(item) {
   try {
     const response = await fetchText(link);
     const canonical = canonicalUrl(response.html, response.url);
-    const source = allowedSource(canonical);
+    const source = allowedSource(canonical) || tag(item, 'NewsSource') || tag(item, 'source') || hostname(canonical);
     const body = extractedText(response.html);
     const publishedAt = publishedFrom(response.html, feedPublishedAt);
-    if (!source || !isFresh(publishedAt) || body.length < 650 || relevanceScore(`${title} ${body.slice(0, 12000)}`) < 2) return null;
+    if (!source || !isFresh(publishedAt) || body.length < 450 || relevanceScore(`${title} ${body.slice(0, 12000)}`) < 1) return null;
     return { title, link: canonical, source, publishedAt, body, description: meta(response.html, ['description', 'og:description']), relevance: relevanceScore(`${title} ${body.slice(0, 12000)}`) };
   } catch (error) {
     console.warn(`Skipped unreadable source: ${title} (${error.message})`);
@@ -134,7 +134,7 @@ async function collectCandidates() {
     if (key && !seen.has(key)) { seen.add(key); unique.push(item); }
   }
   const readable = [];
-  for (const item of unique.slice(0, 120)) {
+  for (const item of unique.slice(0, 200)) {
     const candidate = await readCandidate(item);
     if (candidate && !readable.some(existing => similarity(existing.title, candidate.title) > 0.58 || existing.link === candidate.link)) readable.push(candidate);
   }
