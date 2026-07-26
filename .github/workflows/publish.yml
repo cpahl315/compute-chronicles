@@ -39,7 +39,7 @@ jobs:
         run: |
           git config user.name "The Compute Chronicles Publisher"
           git config user.email "actions@github.com"
-          git add index.html archive.html Archive
+          git add index.html archive.html Archive assets data
           git diff --cached --quiet || git commit -m "Publish The Compute Chronicles $(date -u +%F)"
           git push
       - name: Send daily link

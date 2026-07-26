@@ -1,0 +1,33 @@
+name: Update The Compute Chronicles market ticker
+
+on:
+  schedule:
+    - cron: '*/15 * * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: compute-chronicles-market-ticker
+  cancel-in-progress: false
+
+jobs:
+  update-market:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Refresh verified U.S. market prices
+        env:
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        run: node scripts/update-market.mjs
+      - name: Commit refreshed market snapshot
+        run: |
+          git config user.name "The Compute Chronicles Market Ticker"
+          git config user.email "actions@github.com"
+          git add data/market.json
+          git diff --cached --quiet || git commit -m "Refresh market ticker"
+          git push
