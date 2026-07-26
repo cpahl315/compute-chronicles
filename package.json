@@ -1,0 +1,10 @@
+{
+  "name": "compute-chronicles",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "publish-edition": "node scripts/publish.mjs",
+    "check": "node --check scripts/publish.mjs && node --check scripts/send-gmail.mjs && node --check scripts/lib.mjs"
+  }
+}
