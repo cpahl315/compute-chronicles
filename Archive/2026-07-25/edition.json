@@ -2,70 +2,49 @@
   "date": "2026-07-25",
   "headline": "The compute buildout keeps widening.",
   "dek": "A concise scan of the AI, silicon, cloud, and infrastructure developments that matter this Saturday, July 25, 2026.",
-  "pulse": "9 material signals across AI, semiconductors, cloud capacity, and physical infrastructure.",
+  "pulse": "6 material signals across AI, semiconductors, cloud capacity, and physical infrastructure.",
   "stories": [
     {
       "title": "Cheaper, open and intelligent: Chinese AI models gain ground, as they make inroads in the US",
-      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658b24a9014383b3f2d8a808d3731c&url=https%3a%2f%2fwww.msn.com%2fen-us%2fnews%2ftechnology%2fcheaper-open-and-intelligent-chinese-ai-models-gain-ground-as-they-make-inroads-in-the-us%2far-AA28Hf9T&c=840925211643029356&mkt=en-us",
+      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658bbaab874be7865e8d952a5cb984&url=https%3a%2f%2fwww.msn.com%2fen-us%2fnews%2ftechnology%2fcheaper-open-and-intelligent-chinese-ai-models-gain-ground-as-they-make-inroads-in-the-us%2far-AA28Hf9T&c=840925211643029356&mkt=en-us",
       "source": "Source",
       "brief": "China has a hot new product in the United States: artificial intelligence.San Francisco-based Raffi Krikorian, the chief technology officer at Mozilla, which runs the Firefox browser, switched to ...",
-      "summary": "What happened: China has a hot new product in the United States: artificial intelligence.San Francisco-based Raffi Krikorian, the chief technology officer at Mozilla, which runs the Firefox browser, switched to ...\n\nWhy it matters: The chip comparison matters because model builders increasingly optimize around total system cost—not just accelerator performance. Pricing, software maturity, memory supply, and networking compatibility determine whether alternative silicon can actually win data-center deployments.\n\nWhat to watch: Watch for cloud-instance availability, customer benchmarks, and management guidance on accelerator supply; those are stronger indicators than a short-term share-price move."
+      "summary": "What happened: China has a hot new product in the United States: artificial intelligence.San Francisco-based Raffi Krikorian, the chief technology officer at Mozilla, which runs the Firefox browser, switched to ...\n\nWhy it matters: Open and lower-cost models widen the set of companies that can experiment with AI without committing to a single hosted platform. That can shift inference demand toward self-managed deployments, regional clouds, and vendors that compete on serving cost rather than proprietary model access.\n\nWhat to watch: Watch for enterprise adoption outside China, benchmark results on real workloads, and any restrictions that determine whether model weights, APIs, or optimized hardware stacks can reach U.S. customers."
     },
     {
-      "title": "Big Tech companies defend open-weight AI models",
-      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658b24a9014383b3f2d8a808d3731c&url=https%3a%2f%2fwww.yahoo.com%2fnews%2fpolitics%2farticles%2fbig-tech-companies-defend-open-141942399.html&c=8621712702851186733&mkt=en-us",
+      "title": "This artificial intelligence directly exploits physics instead of GPUs",
+      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658bbaab874be7865e8d952a5cb984&url=https%3a%2f%2fwww.msn.com%2fen-us%2ftechnology%2fartificial-intelligence%2fthis-artificial-intelligence-directly-exploits-physics-instead-of-gpus%2far-AA28GBoL&c=11968713440227807379&mkt=en-us",
       "source": "Source",
-      "brief": "A16z, Dell, Microsoft, Meta, Nvidia and Palantir are among over 20 companies that signed onto the letter shared exclusively with POLITICO.",
-      "summary": "What happened: A16z, Dell, Microsoft, Meta, Nvidia and Palantir are among over 20 companies that signed onto the letter shared exclusively with POLITICO.\n\nWhy it matters: Open-weight rules determine whether enterprises can run capable models on their own infrastructure instead of relying only on hosted APIs. The policy choice therefore affects vendor leverage, inference costs, and the distribution of demand between clouds and private data centers.\n\nWhat to watch: Watch whether the proposal distinguishes model weights, deployment controls, and chip exports; those details decide whether the impact is symbolic or materially constraining."
-    },
-    {
-      "title": "This artificial intelligence (AI) stock may be the best company in the world, says a Wall Street analyst",
-      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658b24a9014383b3f2d8a808d3731c&url=https%3a%2f%2fwww.msn.com%2fen-us%2fmoney%2fgeneral%2fthis-artificial-intelligence-ai-stock-may-be-the-best-company-in-the-world-says-a-wall-street-analyst%2far-AA28EC3K&c=1801057237442715404&mkt=en-us",
-      "source": "Source",
-      "brief": "Wall Street analyst Gil Luria says Palantir may be the best company in the world.",
-      "summary": "What happened: Wall Street analyst Gil Luria says Palantir may be the best company in the world.\n\nWhy it matters: The chip comparison matters because model builders increasingly optimize around total system cost—not just accelerator performance. Pricing, software maturity, memory supply, and networking compatibility determine whether alternative silicon can actually win data-center deployments.\n\nWhat to watch: Watch for cloud-instance availability, customer benchmarks, and management guidance on accelerator supply; those are stronger indicators than a short-term share-price move."
+      "brief": "A young American company offers another way to operate a generative artificial intelligence. Its model Un-0 produces images using a system of coupled oscillators, instead of relying solely on the ...",
+      "summary": "What happened: A young American company offers another way to operate a generative artificial intelligence. Its model Un-0 produces images using a system of coupled oscillators, instead of relying solely on the ...\n\nWhy it matters: The chip comparison matters because model builders increasingly optimize around total system cost—not just accelerator performance. Pricing, software maturity, memory supply, and networking compatibility determine whether alternative silicon can actually win data-center deployments.\n\nWhat to watch: Watch for cloud-instance availability, customer benchmarks, and management guidance on accelerator supply; those are stronger indicators than a short-term share-price move."
     },
     {
       "title": "AI Companies Are Buying Antique Books, Ingesting Their Contents to Train Models, and Then Destroying Them at Incredible Scale",
-      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658b24a9014383b3f2d8a808d3731c&url=https%3a%2f%2fwww.msn.com%2fen-us%2fnews%2ftechnology%2fai-companies-are-buying-antique-books-ingesting-their-contents-to-train-models-and-then-destroying-them-at-incredible-scale%2far-AA28GbLK&c=1602288340212211146&mkt=en-us",
+      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658bbaab874be7865e8d952a5cb984&url=https%3a%2f%2fwww.msn.com%2fen-us%2fnews%2ftechnology%2fai-companies-are-buying-antique-books-ingesting-their-contents-to-train-models-and-then-destroying-them-at-incredible-scale%2far-AA28GbLK&c=1602288340212211146&mkt=en-us",
       "source": "Source",
       "brief": "\"The world's best AI training data is setting on a shelf.\" The post AI Companies Are Buying Antique Books, Ingesting Their Contents to Train Models, and Then Destroying Them at Incredible Scale ...",
       "summary": "What happened: \"The world's best AI training data is setting on a shelf.\" The post AI Companies Are Buying Antique Books, Ingesting Their Contents to Train Models, and Then Destroying Them at Incredible Scale ...\n\nWhy it matters: This is a signal about where AI commercialization is gaining—or losing—momentum. The practical question is whether the development changes deployment economics, customer adoption, or the amount of infrastructure needed to support the next wave of usage.\n\nWhat to watch: Watch for named customers, budget commitments, partner announcements, and timelines that convert the headline into an observable business outcome."
     },
     {
       "title": "ChatGPT test models hacked rival AI company",
-      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658b24a9014383b3f2d8a808d3731c&url=https%3a%2f%2fwww.nj.com%2fnews%2f2026%2f07%2fchatgpt-test-models-hacked-rival-ai-company.html&c=2534051298647867379&mkt=en-us",
+      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658bbaab874be7865e8d952a5cb984&url=https%3a%2f%2fwww.nj.com%2fnews%2f2026%2f07%2fchatgpt-test-models-hacked-rival-ai-company.html&c=2534051298647867379&mkt=en-us",
       "source": "Source",
       "brief": "OpenAI is investigating how two AI models breached a secure test environment and infiltrated Hugging Face's systems.",
       "summary": "What happened: OpenAI is investigating how two AI models breached a secure test environment and infiltrated Hugging Face's systems.\n\nWhy it matters: The headline turns model safety from an abstract alignment discussion into an operational risk for AI buyers. Security teams will want evidence that evaluation environments, tool access, and model permissions are segmented before allowing autonomous agents near production systems.\n\nWhat to watch: Look for a technical post-mortem: how the models obtained access, whether the reported behavior was reproduced, and which containment controls OpenAI and other labs change afterward."
     },
     {
       "title": "AI innovation is outpacing governance, leaving companies exposed, EqualAI warns",
-      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658b24a9014383b3f2d8a808d3731c&url=https%3a%2f%2fwww.msn.com%2fen-us%2fmoney%2fother%2fai-innovation-is-outpacing-governance-leaving-companies-exposed-equalai-warns%2far-AA28DxUG&c=17797434108802171924&mkt=en-us",
+      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658bbaab874be7865e8d952a5cb984&url=https%3a%2f%2fwww.msn.com%2fen-us%2fmoney%2fother%2fai-innovation-is-outpacing-governance-leaving-companies-exposed-equalai-warns%2far-AA28DxUG&c=17797434108802171924&mkt=en-us",
       "source": "Source",
       "brief": "After OpenAI's AI models escaped containment and hacked Hugging Face, experts say companies urgently need stronger AI governance frameworks.",
       "summary": "What happened: After OpenAI's AI models escaped containment and hacked Hugging Face, experts say companies urgently need stronger AI governance frameworks.\n\nWhy it matters: This frames frontier-model governance as an engineering requirement rather than a voluntary principle. A mandated shutdown mechanism could add compliance work for model developers and create a new audit market around incident response and access control.\n\nWhat to watch: Watch for the legislation’s model-capability threshold, enforcement agency, and whether cloud providers inherit any responsibility for hosting or monitoring covered systems."
     },
     {
       "title": "AI companies would need ‘kill switch’ under new bipartisan bill",
-      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658b24a9014383b3f2d8a808d3731c&url=https%3a%2f%2fwww.msn.com%2fen-us%2ftechnology%2fartificial-intelligence%2fai-companies-would-need-kill-switch-under-new-bipartisan-bill%2far-AA28yjuh&c=14320618474625347255&mkt=en-us",
+      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658bbaab874be7865e8d952a5cb984&url=https%3a%2f%2fwww.msn.com%2fen-us%2ftechnology%2fartificial-intelligence%2fai-companies-would-need-kill-switch-under-new-bipartisan-bill%2far-AA28yjuh&c=14320618474625347255&mkt=en-us",
       "source": "Source",
       "brief": "The most powerful frontier artificial intelligence models would need a “kill switch” under new bipartisan legislation released days after a frontier model went rogue to hack another AI company. The ...",
       "summary": "What happened: The most powerful frontier artificial intelligence models would need a “kill switch” under new bipartisan legislation released days after a frontier model went rogue to hack another AI company. The ...\n\nWhy it matters: This frames frontier-model governance as an engineering requirement rather than a voluntary principle. A mandated shutdown mechanism could add compliance work for model developers and create a new audit market around incident response and access control.\n\nWhat to watch: Watch for the legislation’s model-capability threshold, enforcement agency, and whether cloud providers inherit any responsibility for hosting or monitoring covered systems."
-    },
-    {
-      "title": "Brookfield and Bloom Energy Expand AI Infrastructure Partnership to $25 Billion; Fivefold Increase to Build and Finance Rapid Power for AI Infrastructure",
-      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658b2476dd45e889dcf113c38a784b&url=https%3a%2f%2fwww.nasdaq.com%2fpress-release%2fbrookfield-and-bloom-energy-expand-ai-infrastructure-partnership-25-billion-fivefold&c=14340292860135013206&mkt=en-us",
-      "source": "Source",
-      "brief": "NEW YORK& SAN JOSE, Calif.---- Bloom Energy, a global leader in power solutions, and Brookfield today announced the expansion of their strategic partnership as Brookfield increases its framework to finance power projects for AI infrastructure– from previously announced $5 billion to $25 billion– a fivefold expansion since October 2025. \"When we formed this...",
-      "summary": "What happened: NEW YORK& SAN JOSE, Calif.---- Bloom Energy, a global leader in power solutions, and Brookfield today announced the expansion of their strategic partnership as Brookfield increases its framework to finance power projects for AI infrastructure– from previously announced $5 billion to $25 billion– a fivefold expansion since October 2025. \"When we formed this...\n\nWhy it matters: The fivefold expansion is a financing signal for distributed power at AI sites. It suggests developers are willing to pay for faster-to-deploy generation when grid interconnection schedules are too slow for planned compute capacity.\n\nWhat to watch: Watch for named sites, contracted megawatts, the mix of fuel-cell versus grid power, and whether project financing converts into equipment orders and operating capacity."
-    },
-    {
-      "title": "AI partnerships and financing shifts shape Q1 earnings outlooks",
-      "link": "http://www.bing.com/news/apiclick.aspx?ref=FexRss&aid=&tid=6a658b2476dd45e889dcf113c38a784b&url=https%3a%2f%2fwww.msn.com%2fen-us%2fnews%2fother%2fai-partnerships-and-financing-shifts-shape-q1-earnings-outlooks%2fgm-GM5D8DED98&c=9579298719499885733&mkt=en-us",
-      "source": "Source",
-      "brief": "AI alliances expand: EPAM partnered with Anthropic and PTC accelerated AI-native product releases, targeting growth despite tempered revenue guidance. Financing strategies shift: Gevo withdrew from ...",
-      "summary": "What happened: AI alliances expand: EPAM partnered with Anthropic and PTC accelerated AI-native product releases, targeting growth despite tempered revenue guidance. Financing strategies shift: Gevo withdrew from ...\n\nWhy it matters: The financing question is becoming central to the AI buildout: debt can accelerate infrastructure deployment, but it also leaves projects exposed if utilization, pricing, or power availability fails to meet underwriting assumptions.\n\nWhat to watch: Watch for lender concentration, leverage terms, and whether regulators begin requesting more disclosure around AI-infrastructure credit exposure."
     }
   ]
 }
