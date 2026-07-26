@@ -7,6 +7,7 @@ const zone = 'America/Chicago';
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date());
 const hour = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: zone }).format(new Date()));
 const force = process.env.FORCE_PUBLISH === 'true';
+const maxAgeHours = 36;
 const siteUrl = (process.env.SITE_URL || 'https://YOUR-GITHUB-HANDLE.github.io/compute-chronicles').replace(/\/$/, '');
 const archiveDir = path.join(root, 'Archive', today);
 
@@ -75,7 +76,7 @@ async function sourceBrief(link) {
 }
 
 async function collectStories() {
-  const requests = queries.map(query => fetch(`https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss`).then(response => response.ok ? response.text() : '').catch(() => ''));
+  const requests = queries.map(query => fetch(`https://news.google.com/rss/search?q=${encodeURIComponent(`${query} when:1d`)}&hl=en-US&gl=US&ceid=US:en`).then(response => response.ok ? response.text() : '').catch(() => ''));
   const feeds = await Promise.all(requests);
   const seen = new Set();
   const themes = new Set();
@@ -86,16 +87,18 @@ async function collectStories() {
       const link = tag(item, 'link');
       const source = tag(item, 'NewsSource') || tag(item, 'source') || 'Source';
       const brief = cleanDescription(tag(item, 'description'));
+      const publishedAt = Date.parse(tag(item, 'pubDate'));
       const key = title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 85);
       const theme = storyTheme(title);
-      if (!title || !link || seen.has(key) || (theme && themes.has(theme)) || title.length < 24) continue;
+      const isFresh = !Number.isFinite(publishedAt) || (publishedAt <= Date.now() && Date.now() - publishedAt <= maxAgeHours * 60 * 60 * 1000);
+      if (!title || !link || !isFresh || seen.has(key) || (theme && themes.has(theme)) || title.length < 24) continue;
       seen.add(key);
       if (theme) themes.add(theme);
       const happened = brief || `The report focuses on ${title}.`;
-      stories.push({ title, link, source, brief, summary: fallbackSummary(title, happened) });
+      stories.push({ title, link, source, brief, publishedAt, summary: fallbackSummary(title, happened) });
     }
   }
-  const selected = stories.slice(0, 10);
+  const selected = stories.sort((left, right) => right.publishedAt - left.publishedAt).slice(0, 5);
   await Promise.all(selected.map(async story => {
     const publishedDescription = await sourceBrief(story.link);
     if (publishedDescription && publishedDescription.length > 45 && !/aggregated from sources all over the world/i.test(publishedDescription)) {
@@ -139,15 +142,32 @@ function editionBodyV3(edition) {
   return `<section class="hero"><div class="eyebrow">${dateLabel(edition.date)} · Daily briefing</div><h1>${escapeHtml(edition.headline)}</h1><p class="dek">${escapeHtml(edition.dek)}</p></section>${visuals}<section class="market-pulse"><strong>MARKET PULSE</strong><span>${escapeHtml(edition.pulse)}</span></section><section><h2 class="section-title">Today’s signal</h2>${edition.stories.length ? edition.stories.map(storyMarkupV2).join('') : '<p class="dek">No material items cleared today’s editorial threshold. The previous edition remains available in the archive.</p>'}</section>`;
 }
 
+function briefingSummary(story) {
+  const [why, watch] = storyContext(story.title);
+  return `${story.brief || story.title} ${why} Watch next for ${watch.replace(/^Watch for /i, '').replace(/^Watch whether /i, '')}`;
+}
+function storyMarkupTopFive(story, index) {
+  return `<article class="story"><div class="story-number">${String(index + 1).padStart(2, '0')}</div><div class="story-main"><div class="story-heading"><h2>${escapeHtml(story.title)}</h2><span class="story-source">${escapeHtml(story.source)}</span></div><p style="color:#42526a;font-size:1rem;line-height:1.72;max-width:850px;margin:0 0 20px">${escapeHtml(briefingSummary(story))}</p><a class="source" href="${escapeHtml(story.link)}" target="_blank" rel="noopener noreferrer">Read source <b>↗</b></a></div></article>`;
+}
+function trendsPassage(stories) {
+  const topics = stories.map(story => story.title).join(' ').toLowerCase();
+  const policy = /china|export|open.?weight|policy|regulat/.test(topics) ? 'Policy and cross-border model access remain a live variable, especially where open models, advanced chips, and cloud capacity intersect.' : 'Geopolitical exposure remains material through chip-export controls, regional power policy, and the location of advanced manufacturing.';
+  return `The day’s signal is that AI demand is increasingly constrained by the physical and financial systems around the models. Accelerator supply is only one bottleneck: high-bandwidth memory, advanced packaging, optical networking, transformers, switchgear, liquid-cooling equipment, and utility interconnections can each slow a new build. ${policy} As projects grow, financing discipline matters too—utilization assumptions, power contracts, and construction schedules now influence which announced data-center capacity actually reaches service.`;
+}
+function editionBodyV4(edition) {
+  const visuals = `<section class="visual-strip" style="display:grid;grid-template-columns:1.6fr .8fr;gap:18px;margin:0 0 40px"><figure style="margin:0;position:relative;overflow:hidden;background:#112a68"><img src="./assets/data-center-hero.png" alt="Modern AI data center with liquid cooling" style="width:100%;height:300px;display:block;object-fit:cover"><figcaption style="margin:0;padding:12px 15px;background:#fff;color:#101a2e;font:500 11px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em">Inside the physical backbone of the AI buildout.</figcaption></figure><figure style="margin:0;overflow:hidden;background:#ffdf56"><img src="./assets/ai-chip-detail.png" alt="AI accelerator chip and fiber optics" style="width:100%;height:300px;display:block;object-fit:cover"><figcaption style="margin:0;padding:12px 15px;background:#fff;color:#101a2e;font:500 11px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em">Compute, interconnect, and capacity.</figcaption></figure></section>`;
+  return `<section class="hero"><div class="eyebrow">${dateLabel(edition.date)} · Top five daily briefing</div><h1>${escapeHtml(edition.headline)}</h1><p class="dek">Five fresh developments in AI and data centers, plus the constraints shaping what happens next.</p></section>${visuals}<section class="market-pulse"><strong>MARKET PULSE</strong><span>${escapeHtml(edition.pulse)}</span></section><section><h2 class="section-title">Top five stories</h2>${edition.stories.map(storyMarkupTopFive).join('')}</section><section style="background:#fff4b5;border:1px solid #f0ca40;padding:30px;margin:30px 0 60px"><div class="eyebrow" style="color:#8a5a00">Industry outlook</div><h2 style="font-size:clamp(1.7rem,3vw,2.35rem);letter-spacing:-.05em;margin:10px 0 12px">What the market is telling us.</h2><p style="color:#3e4651;line-height:1.75;margin:0;max-width:900px">${escapeHtml(trendsPassage(edition.stories))}</p></section>`;
+}
+
 const rawStories = await collectStories();
 if (!rawStories.length) throw new Error('No source feeds were available; preserving the existing live edition.');
 const stories = await enrich(rawStories);
-const edition = { date: today, headline: 'The compute buildout keeps widening.', dek: `A concise scan of the AI, silicon, cloud, and infrastructure developments that matter this ${dateLabel(today)}.`, pulse: `${stories.length} material signals across AI, semiconductors, cloud capacity, and physical infrastructure.`, stories };
+const edition = { date: today, headline: 'Five signals shaping the AI buildout.', dek: `A concise scan of the newest AI and data-center developments for ${dateLabel(today)}.`, pulse: `${stories.length} fresh, material signals across AI, semiconductors, cloud capacity, and physical infrastructure.`, stories };
 await mkdir(archiveDir, { recursive: true });
 await writeFile(path.join(archiveDir, 'edition.json'), JSON.stringify(edition, null, 2));
-const archivePage = pageShell({ title: dateLabel(today), description: edition.dek, active: 'home', body: editionBodyV3(edition) }).replaceAll('./assets/', '../../assets/').replaceAll('./index.html', '../../index.html').replaceAll('./archive.html', '../../archive.html');
+const archivePage = pageShell({ title: dateLabel(today), description: edition.dek, active: 'home', body: editionBodyV4(edition) }).replaceAll('./assets/', '../../assets/').replaceAll('./index.html', '../../index.html').replaceAll('./archive.html', '../../archive.html');
 await writeFile(path.join(archiveDir, 'index.html'), archivePage);
-await writeFile(path.join(root, 'index.html'), pageShell({ title: 'Today', description: edition.dek, active: 'home', body: editionBodyV3(edition) }));
+await writeFile(path.join(root, 'index.html'), pageShell({ title: 'Today', description: edition.dek, active: 'home', body: editionBodyV4(edition) }));
 const dates = (await readdir(path.join(root, 'Archive'), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort().reverse();
 const editions = await Promise.all(dates.map(async date => JSON.parse(await readFile(path.join(root, 'Archive', date, 'edition.json'), 'utf8'))));
 await writeFile(path.join(root, 'archive.html'), pageShell({ title: 'Archive', description: 'Past Compute Current editions', active: 'archive', body: archiveBody(editions) }));
