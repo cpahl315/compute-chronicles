@@ -35,6 +35,23 @@ function cleanTitle(title) { return title.replace(/\s+-\s+[^-]{2,80}$/, '').trim
 function cleanDescription(description) {
   return decode(description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')).trim().slice(0, 650);
 }
+function fallbackSummary(happened) {
+  return `What happened: ${happened}\n\nWhy it matters: This development is relevant to the AI and data-center buildout because it can affect the pace, cost, policy environment, or competitive position of the companies and infrastructure involved.\n\nWhat to watch: Follow the original reporting for confirmed details, implementation timing, and any response from the companies or agencies involved.`;
+}
+function articleDescription(html) {
+  for (const meta of html.match(/<meta\b[^>]*>/gi) || []) {
+    if (!/(?:name|property)=["'](?:description|og:description)["']/i.test(meta)) continue;
+    const content = meta.match(/content=["']([\s\S]*?)["']/i)?.[1];
+    if (content) return cleanDescription(content);
+  }
+  return '';
+}
+async function sourceBrief(link) {
+  try {
+    const response = await fetch(link, { redirect: 'follow', signal: AbortSignal.timeout(8000) });
+    return response.ok ? articleDescription(await response.text()) : '';
+  } catch { return ''; }
+}
 
 async function collectStories() {
   const requests = queries.map(query => fetch(`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`).then(response => response.ok ? response.text() : '').catch(() => ''));
@@ -51,10 +68,18 @@ async function collectStories() {
       if (!title || !link || seen.has(key) || title.length < 24) continue;
       seen.add(key);
       const happened = brief || `The report focuses on ${title}.`;
-      stories.push({ title, link, source, brief, summary: `What happened: ${happened}\n\nWhy it matters: This development is relevant to the AI and data-center buildout because it can affect the pace, cost, policy environment, or competitive position of the companies and infrastructure involved.\n\nWhat to watch: Follow the original reporting for confirmed details, implementation timing, and any response from the companies or agencies involved.` });
+      stories.push({ title, link, source, brief, summary: fallbackSummary(happened) });
     }
   }
-  return stories.slice(0, 10);
+  const selected = stories.slice(0, 10);
+  await Promise.all(selected.map(async story => {
+    const publishedDescription = await sourceBrief(story.link);
+    if (publishedDescription && publishedDescription.length > 45 && !/aggregated from sources all over the world/i.test(publishedDescription)) {
+      story.brief = publishedDescription;
+      story.summary = fallbackSummary(publishedDescription);
+    }
+  }));
+  return selected;
 }
 
 async function enrich(stories) {
@@ -73,15 +98,27 @@ function storyMarkup(story, index) { return `<article class="story"><div class="
 function editionBody(edition) { return `<section class="hero"><div class="eyebrow">${dateLabel(edition.date)} · Daily briefing</div><h1>${escapeHtml(edition.headline)}</h1><p class="dek">${escapeHtml(edition.dek)}</p></section><section class="market-pulse"><strong>MARKET PULSE</strong><span>${escapeHtml(edition.pulse)}</span></section><section><h2 class="section-title">Today’s signal</h2>${edition.stories.length ? edition.stories.map(storyMarkup).join('') : '<p class="dek">No material items cleared today’s editorial threshold. The previous edition remains available in the archive.</p>'}</section>`; }
 function archiveBody(editions) { return `<section class="archive-hero"><div class="eyebrow">Every daily edition</div><h1>The archive.</h1><p class="dek">A durable record of the AI and infrastructure signals that moved the market.</p></section><ol class="archive-list">${editions.map(edition => `<li><a href="./Archive/${edition.date}/index.html"><span class="meta">${dateLabel(edition.date)}</span><div><h2>${escapeHtml(edition.headline)}</h2><p>${escapeHtml(edition.dek)}</p></div><span class="arrow">↗</span></a></li>`).join('')}</ol>`; }
 
+function storyMarkupV2(story, index) {
+  const sections = story.summary.split(/\n\s*\n/).filter(Boolean).map(section => {
+    const match = section.match(/^(What happened|Why it matters|What to watch):\s*([\s\S]*)$/i);
+    const label = match?.[1] || 'Briefing';
+    const copy = match?.[2] || section;
+    return `<div class="detail"><span>${escapeHtml(label)}</span><p>${escapeHtml(copy)}</p></div>`;
+  }).join('');
+  return `<article class="story"><div class="story-number">${String(index + 1).padStart(2, '0')}</div><div class="story-main"><div class="story-heading"><h2>${escapeHtml(story.title)}</h2><span class="story-source">${escapeHtml(story.source)}</span></div><div class="story-details">${sections}</div><a class="source" href="${escapeHtml(story.link)}" target="_blank" rel="noopener noreferrer">Open original reporting <b>↗</b></a></div></article>`;
+}
+
+function editionBodyV2(edition) { return `<section class="hero"><div class="eyebrow">${dateLabel(edition.date)} · Daily briefing</div><h1>${escapeHtml(edition.headline)}</h1><p class="dek">${escapeHtml(edition.dek)}</p></section><section class="market-pulse"><strong>MARKET PULSE</strong><span>${escapeHtml(edition.pulse)}</span></section><section><h2 class="section-title">Today’s signal</h2>${edition.stories.length ? edition.stories.map(storyMarkupV2).join('') : '<p class="dek">No material items cleared today’s editorial threshold. The previous edition remains available in the archive.</p>'}</section>`; }
+
 const rawStories = await collectStories();
 if (!rawStories.length) throw new Error('No source feeds were available; preserving the existing live edition.');
 const stories = await enrich(rawStories);
 const edition = { date: today, headline: 'The compute buildout keeps widening.', dek: `A concise scan of the AI, silicon, cloud, and infrastructure developments that matter this ${dateLabel(today)}.`, pulse: `${stories.length} material signals across AI, semiconductors, cloud capacity, and physical infrastructure.`, stories };
 await mkdir(archiveDir, { recursive: true });
 await writeFile(path.join(archiveDir, 'edition.json'), JSON.stringify(edition, null, 2));
-const archivePage = pageShell({ title: dateLabel(today), description: edition.dek, active: 'home', body: editionBody(edition) }).replaceAll('./assets/', '../../assets/').replaceAll('./index.html', '../../index.html').replaceAll('./archive.html', '../../archive.html');
+const archivePage = pageShell({ title: dateLabel(today), description: edition.dek, active: 'home', body: editionBodyV2(edition) }).replaceAll('./assets/', '../../assets/').replaceAll('./index.html', '../../index.html').replaceAll('./archive.html', '../../archive.html');
 await writeFile(path.join(archiveDir, 'index.html'), archivePage);
-await writeFile(path.join(root, 'index.html'), pageShell({ title: 'Today', description: edition.dek, active: 'home', body: editionBody(edition) }));
+await writeFile(path.join(root, 'index.html'), pageShell({ title: 'Today', description: edition.dek, active: 'home', body: editionBodyV2(edition) }));
 const dates = (await readdir(path.join(root, 'Archive'), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort().reverse();
 const editions = await Promise.all(dates.map(async date => JSON.parse(await readFile(path.join(root, 'Archive', date, 'edition.json'), 'utf8'))));
 await writeFile(path.join(root, 'archive.html'), pageShell({ title: 'Archive', description: 'Past Compute Current editions', active: 'archive', body: archiveBody(editions) }));
