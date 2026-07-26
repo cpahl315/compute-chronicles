@@ -37,12 +37,23 @@ function cleanDescription(description) {
 }
 function storyContext(title) {
   const text = title.toLowerCase();
-  if (/hack|security|containment|breach|rogue/.test(text)) return ['This puts model-evaluation, sandboxing, and enterprise AI governance under a brighter spotlight. A real security incident—or even a credible test failure—can change procurement standards and regulatory expectations.', 'Watch for a technical post-mortem, the scope of the affected systems, and whether other model developers adopt tougher containment or red-team requirements.'];
-  if (/open.?weight|open.?source|restriction|policy|bill|governance|regulat|kill switch/.test(text)) return ['The outcome could shape who can build, distribute, and deploy advanced models. That has direct implications for model competition, enterprise choice, and the infrastructure demand created by more widely available AI.', 'Watch for the bill text, agency guidance, and public positions from leading labs, chipmakers, and cloud platforms.'];
-  if (/nvidia|chip|semiconductor|gpu|amd/.test(text)) return ['Changes in AI silicon demand or policy ripple through server purchases, cloud capacity, and the economics of building new data centers.', 'Watch for shipment guidance, supply commitments, export-policy changes, and capex commentary from cloud customers.'];
-  if (/amazon|layoff|job|workforce/.test(text)) return ['The move offers a read on how a major cloud and AI investor is prioritizing research spending versus near-term products and customer adoption.', 'Watch for AWS or Amazon management commentary on which AI programs gain funding and whether infrastructure spending remains on plan.'];
-  if (/data center|power|cooling|network|capacity|hyperscaler/.test(text)) return ['This speaks directly to the physical constraints behind AI growth: available power, equipment lead times, interconnection, and the cost of adding capacity.', 'Watch for project timelines, utility agreements, equipment orders, and updated capital-expenditure targets.'];
-  return ['The development is a useful signal for how the AI ecosystem is balancing technical progress, commercial pressure, and the infrastructure required to support deployment.', 'Watch for follow-on announcements, customer adoption signals, financing details, and concrete implementation dates.'];
+  if (/hack|security|containment|breach|rogue/.test(text)) return ['The headline turns model safety from an abstract alignment discussion into an operational risk for AI buyers. Security teams will want evidence that evaluation environments, tool access, and model permissions are segmented before allowing autonomous agents near production systems.', 'Look for a technical post-mortem: how the models obtained access, whether the reported behavior was reproduced, and which containment controls OpenAI and other labs change afterward.'];
+  if (/open.?weight|open.?source|restriction/.test(text)) return ['Open-weight rules determine whether enterprises can run capable models on their own infrastructure instead of relying only on hosted APIs. The policy choice therefore affects vendor leverage, inference costs, and the distribution of demand between clouds and private data centers.', 'Watch whether the proposal distinguishes model weights, deployment controls, and chip exports; those details decide whether the impact is symbolic or materially constraining.'];
+  if (/brookfield|bloom energy|power partnership/.test(text)) return ['The fivefold expansion is a financing signal for distributed power at AI sites. It suggests developers are willing to pay for faster-to-deploy generation when grid interconnection schedules are too slow for planned compute capacity.', 'Watch for named sites, contracted megawatts, the mix of fuel-cell versus grid power, and whether project financing converts into equipment orders and operating capacity.'];
+  if (/debt|financial stability|financing/.test(text)) return ['The financing question is becoming central to the AI buildout: debt can accelerate infrastructure deployment, but it also leaves projects exposed if utilization, pricing, or power availability fails to meet underwriting assumptions.', 'Watch for lender concentration, leverage terms, and whether regulators begin requesting more disclosure around AI-infrastructure credit exposure.'];
+  if (/kill switch|\bfrontier.*\bbill\b|\bai companies.*\bbill\b|governance|regulat|policy/.test(text)) return ['This frames frontier-model governance as an engineering requirement rather than a voluntary principle. A mandated shutdown mechanism could add compliance work for model developers and create a new audit market around incident response and access control.', 'Watch for the legislation’s model-capability threshold, enforcement agency, and whether cloud providers inherit any responsibility for hosting or monitoring covered systems.'];
+  if (/nvidia|chip|semiconductor|gpu|amd|intel/.test(text)) return ['The chip comparison matters because model builders increasingly optimize around total system cost—not just accelerator performance. Pricing, software maturity, memory supply, and networking compatibility determine whether alternative silicon can actually win data-center deployments.', 'Watch for cloud-instance availability, customer benchmarks, and management guidance on accelerator supply; those are stronger indicators than a short-term share-price move.'];
+  if (/amazon|layoff|job|workforce/.test(text)) return ['Amazon can cut inside an AI unit while still expanding infrastructure spending, so the key signal is portfolio concentration rather than a retreat from AI. The company appears to be choosing which research paths it believes can reach customers fastest.', 'Watch for AWS re:Invent announcements, Bedrock roadmap changes, and any shift in Amazon’s disclosed capex or partner strategy.'];
+  if (/data center|power|cooling|network|capacity|hyperscaler/.test(text)) return ['The story speaks to the physical bottleneck behind AI growth: a model launch only translates into revenue if there is power, cooling, network fabric, and commissioned capacity behind it. Those constraints can reshape where workloads are built and priced.', 'Watch for signed power agreements, construction milestones, utility interconnection dates, and lead-time commentary from cooling and networking suppliers.'];
+  return ['This is a signal about where AI commercialization is gaining—or losing—momentum. The practical question is whether the development changes deployment economics, customer adoption, or the amount of infrastructure needed to support the next wave of usage.', 'Watch for named customers, budget commitments, partner announcements, and timelines that convert the headline into an observable business outcome.'];
+}
+function storyTheme(title) {
+  const text = title.toLowerCase();
+  if (/hack|security|containment|breach|rogue/.test(text)) return 'model-security';
+  if (/open.?weight|open.?source|restriction/.test(text)) return 'open-model-policy';
+  if (/kill switch|frontier.*bill/.test(text)) return 'frontier-policy';
+  if (/brookfield|bloom energy|power partnership/.test(text)) return 'ai-power-financing';
+  return '';
 }
 function fallbackSummary(title, happened) {
   const [why, watch] = storyContext(title);
@@ -67,6 +78,7 @@ async function collectStories() {
   const requests = queries.map(query => fetch(`https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss`).then(response => response.ok ? response.text() : '').catch(() => ''));
   const feeds = await Promise.all(requests);
   const seen = new Set();
+  const themes = new Set();
   const stories = [];
   for (const feed of feeds) {
     for (const item of feed.match(/<item>[\s\S]*?<\/item>/gi) || []) {
@@ -75,8 +87,10 @@ async function collectStories() {
       const source = tag(item, 'NewsSource') || tag(item, 'source') || 'Source';
       const brief = cleanDescription(tag(item, 'description'));
       const key = title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 85);
-      if (!title || !link || seen.has(key) || title.length < 24) continue;
+      const theme = storyTheme(title);
+      if (!title || !link || seen.has(key) || (theme && themes.has(theme)) || title.length < 24) continue;
       seen.add(key);
+      if (theme) themes.add(theme);
       const happened = brief || `The report focuses on ${title}.`;
       stories.push({ title, link, source, brief, summary: fallbackSummary(title, happened) });
     }
