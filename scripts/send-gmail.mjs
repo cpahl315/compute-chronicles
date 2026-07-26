@@ -1,0 +1,20 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { RECIPIENT, SITE_NAME, dateLabel } from './lib.mjs';
+
+const root = process.cwd();
+const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
+const edition = JSON.parse(await readFile(path.join(root, 'Archive', today, 'edition.json'), 'utf8'));
+const required = ['GMAIL_CLIENT_ID', 'GMAIL_CLIENT_SECRET', 'GMAIL_REFRESH_TOKEN', 'GMAIL_SENDER', 'SITE_URL'];
+const missing = required.filter(name => !process.env[name]);
+if (missing.length) throw new Error(`Gmail is not configured. Missing secrets: ${missing.join(', ')}`);
+const tokenResponse = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: process.env.GMAIL_CLIENT_ID, client_secret: process.env.GMAIL_CLIENT_SECRET, refresh_token: process.env.GMAIL_REFRESH_TOKEN, grant_type: 'refresh_token' }) });
+if (!tokenResponse.ok) throw new Error(`Could not refresh Gmail authorization: ${await tokenResponse.text()}`);
+const { access_token } = await tokenResponse.json();
+const url = `${process.env.SITE_URL.replace(/\/$/, '')}/Archive/${today}/`;
+const subject = `${SITE_NAME} — ${dateLabel(today)}`;
+const message = [`From: ${process.env.GMAIL_SENDER}`, `To: ${RECIPIENT}`, `Subject: ${subject}`, 'MIME-Version: 1.0', 'Content-Type: text/html; charset=UTF-8', '', `<p><strong>${edition.headline}</strong></p><p>${edition.dek}</p><p><a href="${url}">Read today’s The Compute Chronicles briefing →</a></p>`].join('\r\n');
+const raw = Buffer.from(message).toString('base64url');
+const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', { method: 'POST', headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw }) });
+if (!sendResponse.ok) throw new Error(`Gmail send failed: ${await sendResponse.text()}`);
+console.log(`Sent ${today} edition to ${RECIPIENT}.`);
