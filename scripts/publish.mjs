@@ -29,14 +29,24 @@ const queries = [
   'AI infrastructure partnership financing policy'
 ];
 
-function decode(text = '') { return text.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>'); }
+function decode(text = '') { return text.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>'); }
 function tag(item, name) { return decode(item.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)<\\/${name}>`, 'i'))?.[1] || '').trim(); }
 function cleanTitle(title) { return title.replace(/\s+-\s+[^-]{2,80}$/, '').trim(); }
 function cleanDescription(description) {
   return decode(description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')).trim().slice(0, 650);
 }
-function fallbackSummary(happened) {
-  return `What happened: ${happened}\n\nWhy it matters: This development is relevant to the AI and data-center buildout because it can affect the pace, cost, policy environment, or competitive position of the companies and infrastructure involved.\n\nWhat to watch: Follow the original reporting for confirmed details, implementation timing, and any response from the companies or agencies involved.`;
+function storyContext(title) {
+  const text = title.toLowerCase();
+  if (/hack|security|containment|breach|rogue/.test(text)) return ['This puts model-evaluation, sandboxing, and enterprise AI governance under a brighter spotlight. A real security incident—or even a credible test failure—can change procurement standards and regulatory expectations.', 'Watch for a technical post-mortem, the scope of the affected systems, and whether other model developers adopt tougher containment or red-team requirements.'];
+  if (/open.?weight|open.?source|restriction|policy|bill|governance|regulat|kill switch/.test(text)) return ['The outcome could shape who can build, distribute, and deploy advanced models. That has direct implications for model competition, enterprise choice, and the infrastructure demand created by more widely available AI.', 'Watch for the bill text, agency guidance, and public positions from leading labs, chipmakers, and cloud platforms.'];
+  if (/nvidia|chip|semiconductor|gpu|amd/.test(text)) return ['Changes in AI silicon demand or policy ripple through server purchases, cloud capacity, and the economics of building new data centers.', 'Watch for shipment guidance, supply commitments, export-policy changes, and capex commentary from cloud customers.'];
+  if (/amazon|layoff|job|workforce/.test(text)) return ['The move offers a read on how a major cloud and AI investor is prioritizing research spending versus near-term products and customer adoption.', 'Watch for AWS or Amazon management commentary on which AI programs gain funding and whether infrastructure spending remains on plan.'];
+  if (/data center|power|cooling|network|capacity|hyperscaler/.test(text)) return ['This speaks directly to the physical constraints behind AI growth: available power, equipment lead times, interconnection, and the cost of adding capacity.', 'Watch for project timelines, utility agreements, equipment orders, and updated capital-expenditure targets.'];
+  return ['The development is a useful signal for how the AI ecosystem is balancing technical progress, commercial pressure, and the infrastructure required to support deployment.', 'Watch for follow-on announcements, customer adoption signals, financing details, and concrete implementation dates.'];
+}
+function fallbackSummary(title, happened) {
+  const [why, watch] = storyContext(title);
+  return `What happened: ${happened}\n\nWhy it matters: ${why}\n\nWhat to watch: ${watch}`;
 }
 function articleDescription(html) {
   for (const meta of html.match(/<meta\b[^>]*>/gi) || []) {
@@ -54,7 +64,7 @@ async function sourceBrief(link) {
 }
 
 async function collectStories() {
-  const requests = queries.map(query => fetch(`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`).then(response => response.ok ? response.text() : '').catch(() => ''));
+  const requests = queries.map(query => fetch(`https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss`).then(response => response.ok ? response.text() : '').catch(() => ''));
   const feeds = await Promise.all(requests);
   const seen = new Set();
   const stories = [];
@@ -62,13 +72,13 @@ async function collectStories() {
     for (const item of feed.match(/<item>[\s\S]*?<\/item>/gi) || []) {
       const title = cleanTitle(tag(item, 'title'));
       const link = tag(item, 'link');
-      const source = tag(item, 'source') || 'Source';
+      const source = tag(item, 'NewsSource') || tag(item, 'source') || 'Source';
       const brief = cleanDescription(tag(item, 'description'));
       const key = title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 85);
       if (!title || !link || seen.has(key) || title.length < 24) continue;
       seen.add(key);
       const happened = brief || `The report focuses on ${title}.`;
-      stories.push({ title, link, source, brief, summary: fallbackSummary(happened) });
+      stories.push({ title, link, source, brief, summary: fallbackSummary(title, happened) });
     }
   }
   const selected = stories.slice(0, 10);
@@ -76,7 +86,7 @@ async function collectStories() {
     const publishedDescription = await sourceBrief(story.link);
     if (publishedDescription && publishedDescription.length > 45 && !/aggregated from sources all over the world/i.test(publishedDescription)) {
       story.brief = publishedDescription;
-      story.summary = fallbackSummary(publishedDescription);
+      story.summary = fallbackSummary(story.title, publishedDescription);
     }
   }));
   return selected;
@@ -108,7 +118,12 @@ function storyMarkupV2(story, index) {
   return `<article class="story"><div class="story-number">${String(index + 1).padStart(2, '0')}</div><div class="story-main"><div class="story-heading"><h2>${escapeHtml(story.title)}</h2><span class="story-source">${escapeHtml(story.source)}</span></div><div class="story-details">${sections}</div><a class="source" href="${escapeHtml(story.link)}" target="_blank" rel="noopener noreferrer">Open original reporting <b>↗</b></a></div></article>`;
 }
 
-function editionBodyV2(edition) { return `<section class="hero"><div class="eyebrow">${dateLabel(edition.date)} · Daily briefing</div><h1>${escapeHtml(edition.headline)}</h1><p class="dek">${escapeHtml(edition.dek)}</p></section><section class="market-pulse"><strong>MARKET PULSE</strong><span>${escapeHtml(edition.pulse)}</span></section><section><h2 class="section-title">Today’s signal</h2>${edition.stories.length ? edition.stories.map(storyMarkupV2).join('') : '<p class="dek">No material items cleared today’s editorial threshold. The previous edition remains available in the archive.</p>'}</section>`; }
+function editionBodyV2(edition) { return `<section class="hero"><div class="eyebrow">${dateLabel(edition.date)} · Daily briefing</div><h1>${escapeHtml(edition.headline)}</h1><p class="dek">${escapeHtml(edition.dek)}</p></section><section class="visual-strip"><figure><img src="./assets/data-center-hero.png" alt="Modern AI data center with liquid cooling"><figcaption>Inside the physical backbone of the AI buildout.</figcaption></figure><figure><img src="./assets/ai-chip-detail.png" alt="AI accelerator chip and fiber optics"><figcaption>Compute, interconnect, and the race for capacity.</figcaption></figure></section><section class="market-pulse"><strong>MARKET PULSE</strong><span>${escapeHtml(edition.pulse)}</span></section><section><h2 class="section-title">Today’s signal</h2>${edition.stories.length ? edition.stories.map(storyMarkupV2).join('') : '<p class="dek">No material items cleared today’s editorial threshold. The previous edition remains available in the archive.</p>'}</section>`; }
+
+function editionBodyV3(edition) {
+  const visuals = `<section class="visual-strip" style="display:grid;grid-template-columns:1.6fr .8fr;gap:18px;margin:0 0 40px"><figure style="margin:0;position:relative;overflow:hidden;background:#112a68"><img src="./assets/data-center-hero.png" alt="Modern AI data center with liquid cooling" style="width:100%;height:300px;display:block;object-fit:cover"><figcaption style="margin:0;padding:12px 15px;background:#fff;color:#101a2e;font:500 11px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em">Inside the physical backbone of the AI buildout.</figcaption></figure><figure style="margin:0;overflow:hidden;background:#ffdf56"><img src="./assets/ai-chip-detail.png" alt="AI accelerator chip and fiber optics" style="width:100%;height:300px;display:block;object-fit:cover"><figcaption style="margin:0;padding:12px 15px;background:#fff;color:#101a2e;font:500 11px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em">Compute, interconnect, and capacity.</figcaption></figure></section>`;
+  return `<section class="hero"><div class="eyebrow">${dateLabel(edition.date)} · Daily briefing</div><h1>${escapeHtml(edition.headline)}</h1><p class="dek">${escapeHtml(edition.dek)}</p></section>${visuals}<section class="market-pulse"><strong>MARKET PULSE</strong><span>${escapeHtml(edition.pulse)}</span></section><section><h2 class="section-title">Today’s signal</h2>${edition.stories.length ? edition.stories.map(storyMarkupV2).join('') : '<p class="dek">No material items cleared today’s editorial threshold. The previous edition remains available in the archive.</p>'}</section>`;
+}
 
 const rawStories = await collectStories();
 if (!rawStories.length) throw new Error('No source feeds were available; preserving the existing live edition.');
@@ -116,9 +131,9 @@ const stories = await enrich(rawStories);
 const edition = { date: today, headline: 'The compute buildout keeps widening.', dek: `A concise scan of the AI, silicon, cloud, and infrastructure developments that matter this ${dateLabel(today)}.`, pulse: `${stories.length} material signals across AI, semiconductors, cloud capacity, and physical infrastructure.`, stories };
 await mkdir(archiveDir, { recursive: true });
 await writeFile(path.join(archiveDir, 'edition.json'), JSON.stringify(edition, null, 2));
-const archivePage = pageShell({ title: dateLabel(today), description: edition.dek, active: 'home', body: editionBodyV2(edition) }).replaceAll('./assets/', '../../assets/').replaceAll('./index.html', '../../index.html').replaceAll('./archive.html', '../../archive.html');
+const archivePage = pageShell({ title: dateLabel(today), description: edition.dek, active: 'home', body: editionBodyV3(edition) }).replaceAll('./assets/', '../../assets/').replaceAll('./index.html', '../../index.html').replaceAll('./archive.html', '../../archive.html');
 await writeFile(path.join(archiveDir, 'index.html'), archivePage);
-await writeFile(path.join(root, 'index.html'), pageShell({ title: 'Today', description: edition.dek, active: 'home', body: editionBodyV2(edition) }));
+await writeFile(path.join(root, 'index.html'), pageShell({ title: 'Today', description: edition.dek, active: 'home', body: editionBodyV3(edition) }));
 const dates = (await readdir(path.join(root, 'Archive'), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort().reverse();
 const editions = await Promise.all(dates.map(async date => JSON.parse(await readFile(path.join(root, 'Archive', date, 'edition.json'), 'utf8'))));
 await writeFile(path.join(root, 'archive.html'), pageShell({ title: 'Archive', description: 'Past Compute Current editions', active: 'archive', body: archiveBody(editions) }));
