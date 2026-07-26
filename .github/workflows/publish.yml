@@ -2,7 +2,7 @@ name: Publish The Compute Chronicles
 
 on:
   schedule:
-    # Run each hour; the publisher itself enforces 08:00 America/Chicago, including DST.
+    # Run each hour; the publisher itself enforces Sunday 08:00 America/Chicago, including DST.
     - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
@@ -32,7 +32,7 @@ jobs:
       - name: Build today’s edition
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           FORCE_PUBLISH: ${{ inputs.force || 'false' }}
         run: node scripts/publish.mjs
       - name: Commit edition and site
@@ -42,7 +42,7 @@ jobs:
           git add index.html archive.html Archive assets data
           git diff --cached --quiet || git commit -m "Publish The Compute Chronicles $(date -u +%F)"
           git push
-      - name: Send daily link
+      - name: Send weekly link
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
           GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
